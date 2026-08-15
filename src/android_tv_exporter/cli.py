@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-import time
+import signal
+import threading
 
 import adbutils
 import typer
@@ -92,13 +93,24 @@ def main(
     for collector in collectors:
         collector.start()
 
-    try:
-        while True:
-            time.sleep(3600)
-    except KeyboardInterrupt:
-        logger.info("shutting down")
-        for collector in collectors:
-            collector.stop()
+    logger.info(
+        "if you see 'collection failed' / connection errors below on first boot, "
+        "this is expected: the container's ADB key is not yet authorized on the "
+        "TV. Run 'docker compose exec android-tv-exporter adb disconnect <ip:port>' "
+        "then 'adb connect <ip:port>', accept the prompt on the TV, and restart the "
+        "container. See the README 'First-time device setup' section."
+    )
+
+    # Block until we're asked to stop. SIGTERM (docker stop) and SIGINT (Ctrl-C)
+    # both release the event so shutdown is prompt instead of waiting for SIGKILL.
+    stop = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    signal.signal(signal.SIGINT, lambda *_: stop.set())
+    stop.wait()
+
+    logger.info("shutting down")
+    for collector in collectors:
+        collector.stop()
 
 
 if __name__ == "__main__":

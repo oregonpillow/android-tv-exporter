@@ -91,8 +91,17 @@ docker compose exec android-tv-exporter adb connect 192.168.0.27:5555
 </div>
 
 Then accept the prompt on the TV. (The `adb disconnect` part is important because if ADB reports "already connected" it will _not_ re-trigger the authorization dialog.)
-No restart is needed: the exporter reconnects on its next poll cycle (within
-`--interval` seconds) and starts collecting automatically, although you could also restart the container instead.
+
+After accepting the prompt, **restart the container** so the exporter picks up the
+now-authorized connection:
+
+```sh
+docker compose restart android-tv-exporter
+```
+
+> On first boot — before the TV has authorized the container — the logs will show
+> `collection failed` / connection errors. This is expected; follow the
+> disconnect/connect/accept/restart steps above and the errors will clear.
 
 **Running the CLI directly:** this path expects the `adb` command line tool to be
 installed on your host (e.g. `brew install android-platform-tools`, or the
