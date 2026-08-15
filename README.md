@@ -1,6 +1,10 @@
-# android-tv-exporter
 
-A generic Prometheus exporter for Android TV devices, collected over ADB.
+<div align="center">
+  <img src="grafana/google_streamer_4k_v1.jpg" width="600px" alt="Grafana Dashboard" />
+  <h1 style="font-size: 28px; margin: 10px 0;">android-tv-exporter</h1>
+  <p>A generic Prometheus exporter for Android TV devices, collected over ADB.</p>
+</div>
+<br>
 
 It polls stable `/proc` and `/sys` sources on one or more Android TV devices via
 the local ADB server and exposes them as Prometheus metrics.
@@ -76,10 +80,15 @@ host.
 The container's ADB server generates its own keypair (`adbkey` / `adbkey.pub`) on first start. The TV stores and trusts that public key, so it must be authorized for the container specifically. With the
 container running:
 
+
 ```sh
 docker compose exec android-tv-exporter adb disconnect 192.168.0.27:5555
 docker compose exec android-tv-exporter adb connect 192.168.0.27:5555
 ```
+
+<div align="center">
+  <img src="example_popup.png" width="400px" alt="Allow USB debugging prompt on the TV" />
+</div>
 
 Then accept the prompt on the TV. (The `adb disconnect` part is important because if ADB reports "already connected" it will _not_ re-trigger the authorization dialog.)
 No restart is needed: the exporter reconnects on its next poll cycle (within
@@ -146,7 +155,48 @@ Parsers live in `src/android_tv_exporter/parsers.py` as pure functions and are
 unit-tested against captured fixtures, so new metric parsing can be added and
 tested without a device.
 
+## Tested devices
+
+| Device            | Model / board       | Android version | Status  | Notes                                    |
+| ----------------- | ------------------- | --------------- | ------- | ---------------------------------------- |
+| Google TV Streamer (4K) | board `kirkwood` | Android 14      | ✅ Verified | All exported metrics confirmed live |
+
+Other Android TV devices are expected to work for the core `/proc`, `/sys` and
+`df` metrics, which are broadly stable across the Android platform. The
+`dumpsys`-based metrics (temperature, GPU memory, power state) are the most likely
+to vary — see the roadmap below. If you run this against another device, a PR
+adding it to this table (and any device-specific fixtures) is welcome.
+
+## Roadmap / future ideas
+
+So far the exporter deliberately scrapes only **stable** sources: `/proc`, `/sys`
+and `df` expose the same fields across Android versions and devices, so their
+parsers are portable and safe to rely on.
+
+The `dumpsys` subsystem is a much richer source of metrics (thermal, GPU, power,
+display, media, network, and more), but its output format is **not** a stable
+contract — it changes between Android versions, vendor HAL implementations, and
+even individual devices. Parsing it generically risks silently breaking or
+emitting wrong values on hardware we haven't tested.
+
+A possible way to unlock these metrics without sacrificing reliability:
+
+- **Version/device-specific `dumpsys` parsers.** Select a parser implementation
+  based on detected properties (e.g. `ro.build.version.sdk`, board, manufacturer)
+  so each parser only has to handle output shapes it was actually verified
+  against.
+- **Captured fixtures per device.** Store real `dumpsys` output as test fixtures
+  (as we already do for the stable parsers) so device-specific parsing can be
+  unit-tested without the hardware present.
+- **Graceful fallback.** When no matching parser is found for a device, skip the
+  best-effort metric rather than exporting a guess — keeping the core metrics
+  trustworthy everywhere.
+
+Contributions of `dumpsys` captures and parsers for additional devices would be
+the main driver here.
+
 ## References
+
 
 Built on these open-source projects:
 
