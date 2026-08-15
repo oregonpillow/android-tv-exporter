@@ -1,0 +1,42 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff lint
+        language: system
+        entry: uv run ruff check .
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff-isort
+        name: ruff isort
+        language: system
+        entry: uv run ruff check --select I --fix .
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff-format
+        name: ruff format
+        language: system
+        entry: uv run ruff format .
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+      - id: pytest
+        name: pytest
+        language: system
+        entry: uv run pytest tests
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+      - id: deptry
+        name: deptry
+        language: system
+        entry: uv run deptry .
+        types: [python]
+        pass_filenames: false
+        always_run: true

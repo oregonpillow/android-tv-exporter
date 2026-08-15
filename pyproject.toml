@@ -1,0 +1,43 @@
+[project]
+name = "android-tv-exporter"
+version = "0.1.0"
+description = "Generic Prometheus exporter for Android TV devices over ADB"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "adbutils>=2.0.0",
+    "prometheus-client>=0.20.0",
+    "typer>=0.12.0",
+]
+
+[project.scripts]
+android-tv-exporter = "android_tv_exporter.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/oregonpillow/android-tv-exporter"
+Repository = "https://github.com/oregonpillow/android-tv-exporter"
+
+[dependency-groups]
+dev = [
+    "deptry>=0.20.0",
+    "pre-commit>=3.8.0",
+    "pytest>=8.0.0",
+    "ruff>=0.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/android_tv_exporter"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint.per-file-ignores]
+# Typer relies on function-call defaults for Option/Argument.
+"src/android_tv_exporter/cli.py" = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

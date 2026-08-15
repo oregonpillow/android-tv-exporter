@@ -1,0 +1,20 @@
+services:
+  android-tv-exporter:
+    build: .
+    image: android-tv-exporter:latest
+    container_name: android-tv-exporter
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    ports:
+      - "9100:9100"
+    environment:
+      ANDROIDTV_DEVICES: "192.168.0.27:5555"
+      # Optional tuning (defaults shown).
+      # ANDROIDTV_ADB_HOST: "127.0.0.1"
+      # ANDROIDTV_ADB_PORT: "5037"
+      # ANDROIDTV_LISTEN_PORT: "9100"
+      # ANDROIDTV_INTERVAL: "15"
+      # ANDROIDTV_TIMEOUT: "10"
+      # ANDROIDTV_LOG_LEVEL: "INFO"
+    volumes:
+      - ./adb-keys:/home/exporter/.android

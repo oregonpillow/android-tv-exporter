@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# UV / venv
+.venv/
+venv/
+
+# Build
+dist/
+build/
+
+# ADB keypair (private) persisted by the container
+adb-keys/
