@@ -2,8 +2,6 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
 
-
-
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=0
@@ -31,7 +29,7 @@ RUN useradd --create-home --uid 10001 exporter
 
 COPY --from=builder /app/.venv /app/.venv
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH" \
     HOME=/home/exporter \
