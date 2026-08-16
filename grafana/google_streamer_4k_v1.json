@@ -3,7 +3,7 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "adp252r",
-    "generation": 8,
+    "generation": 16,
     "creationTimestamp": "2026-08-15T21:44:17Z",
     "labels": {},
     "annotations": {}
@@ -786,6 +786,18 @@
               "fieldConfig": {
                 "defaults": {
                   "unit": "decbytes",
+                  "mappings": [
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "null",
+                        "result": {
+                          "color": "red",
+                          "index": 1
+                        }
+                      }
+                    }
+                  ],
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -823,42 +835,361 @@
           "transparent": true
         }
       },
-      "panel-14": {
+      "panel-15": {
         "kind": "Panel",
         "spec": {
-          "id": 14,
-          "title": "",
+          "id": 15,
+          "title": "Last Scrape Duration",
           "description": "",
           "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
-              "queries": [],
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "androidtv_collect_duration_seconds{device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}",
+                        "instant": false,
+                        "legendFormat": "Scrape Duration",
+                        "range": true
+                      },
+                      "labels": {
+                        "grafana.app/export-label": "prometheus-1",
+                        "grafana.app/export-datasource-name": "prometheus"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
               "transformations": [],
               "queryOptions": {}
             }
           },
           "vizConfig": {
             "kind": "VizConfig",
-            "group": "text",
+            "group": "stat",
             "version": "13.1.3",
             "spec": {
               "options": {
-                "code": {
-                  "language": "plaintext",
-                  "showLineNumbers": false,
-                  "showMiniMap": false
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
                 },
-                "content": "<h1 style=\"text-align: center;\">Google Streamer 4K 📺</h1>",
-                "mode": "html"
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
               },
               "fieldConfig": {
-                "defaults": {},
+                "defaults": {
+                  "unit": "s",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  }
+                },
                 "overrides": []
               }
             }
           },
           "transparent": true
+        }
+      },
+      "panel-16": {
+        "kind": "Panel",
+        "spec": {
+          "id": 16,
+          "title": "Network Tx ↑",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(androidtv_network_transmit_bytes_total{interface=\"eth0\"}[$__rate_interval]))",
+                        "instant": false,
+                        "legendFormat": "__auto",
+                        "range": true
+                      },
+                      "labels": {
+                        "grafana.app/export-label": "prometheus-1",
+                        "grafana.app/export-datasource-name": "prometheus"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.1.3",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": false
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "Bps",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 29,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\"}[1m0s]))"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.transform",
+                        "value": "negative-Y"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-17": {
+        "kind": "Panel",
+        "spec": {
+          "id": 17,
+          "title": "Network Rx ↓",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\"}[$__rate_interval]))",
+                        "instant": false,
+                        "legendFormat": "__auto",
+                        "range": true
+                      },
+                      "labels": {
+                        "grafana.app/export-label": "prometheus-1",
+                        "grafana.app/export-datasource-name": "prometheus"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.1.3",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": false
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "Bps",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 30,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\"}[1m0s]))"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.transform",
+                        "value": "negative-Y"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
         }
       },
       "panel-2": {
@@ -881,7 +1212,9 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
+                        "exemplar": false,
                         "expr": "androidtv_temperature_celsius{device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}",
+                        "instant": false,
                         "legendFormat": "{{zone}}",
                         "range": true
                       },
@@ -1293,6 +1626,16 @@
                           "index": 0
                         }
                       }
+                    },
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "null",
+                        "result": {
+                          "color": "red",
+                          "index": 2
+                        }
+                      }
                     }
                   ],
                   "thresholds": {
@@ -1387,7 +1730,7 @@
                         "color": "green"
                       },
                       {
-                        "value": 80,
+                        "value": 1,
                         "color": "red"
                       }
                     ]
@@ -1426,7 +1769,7 @@
                         "exemplar": false,
                         "expr": "androidtv_uptime_seconds{device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}",
                         "instant": true,
-                        "legendFormat": "__auto",
+                        "legendFormat": "Uptime",
                         "range": false
                       },
                       "labels": {
@@ -1468,6 +1811,18 @@
               "fieldConfig": {
                 "defaults": {
                   "unit": "s",
+                  "mappings": [
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "null",
+                        "result": {
+                          "color": "red",
+                          "index": 0
+                        }
+                      }
+                    }
+                  ],
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -1656,8 +2011,8 @@
                 "showHeader": true,
                 "sortBy": [
                   {
-                    "desc": false,
-                    "displayName": "Usage"
+                    "desc": true,
+                    "displayName": "size"
                   }
                 ]
               },
@@ -1798,21 +2153,8 @@
             "spec": {
               "x": 0,
               "y": 0,
-              "width": 24,
-              "height": 2,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-14"
-              }
-            }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 0,
-              "y": 2,
               "width": 3,
-              "height": 5,
+              "height": 6,
               "element": {
                 "kind": "ElementReference",
                 "name": "panel-10"
@@ -1823,8 +2165,8 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 3,
-              "y": 2,
-              "width": 4,
+              "y": 0,
+              "width": 3,
               "height": 6,
               "element": {
                 "kind": "ElementReference",
@@ -1835,8 +2177,21 @@
           {
             "kind": "GridLayoutItem",
             "spec": {
-              "x": 7,
-              "y": 2,
+              "x": 6,
+              "y": 0,
+              "width": 3,
+              "height": 6,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-15"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 9,
+              "y": 0,
               "width": 3,
               "height": 6,
               "element": {
@@ -1848,9 +2203,9 @@
           {
             "kind": "GridLayoutItem",
             "spec": {
-              "x": 10,
-              "y": 2,
-              "width": 10,
+              "x": 12,
+              "y": 0,
+              "width": 9,
               "height": 6,
               "element": {
                 "kind": "ElementReference",
@@ -1861,9 +2216,9 @@
           {
             "kind": "GridLayoutItem",
             "spec": {
-              "x": 20,
-              "y": 2,
-              "width": 4,
+              "x": 21,
+              "y": 0,
+              "width": 3,
               "height": 6,
               "element": {
                 "kind": "ElementReference",
@@ -1875,7 +2230,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 8,
+              "y": 6,
               "width": 24,
               "height": 4,
               "element": {
@@ -1888,7 +2243,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 12,
+              "y": 10,
               "width": 24,
               "height": 6,
               "element": {
@@ -1901,7 +2256,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 18,
+              "y": 16,
               "width": 8,
               "height": 10,
               "element": {
@@ -1914,7 +2269,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 8,
-              "y": 18,
+              "y": 16,
               "width": 8,
               "height": 10,
               "element": {
@@ -1927,7 +2282,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 16,
-              "y": 18,
+              "y": 16,
               "width": 8,
               "height": 10,
               "element": {
@@ -1940,7 +2295,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 28,
+              "y": 26,
               "width": 24,
               "height": 9,
               "element": {
@@ -1953,12 +2308,38 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 37,
+              "y": 35,
               "width": 24,
               "height": 13,
               "element": {
                 "kind": "ElementReference",
                 "name": "panel-8"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 0,
+              "y": 48,
+              "width": 24,
+              "height": 8,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-16"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 0,
+              "y": 56,
+              "width": 24,
+              "height": 8,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-17"
               }
             }
           }
@@ -1973,7 +2354,7 @@
       "timezone": "browser",
       "from": "now-6h",
       "to": "now",
-      "autoRefresh": "",
+      "autoRefresh": "30s",
       "autoRefreshIntervals": [
         "5s",
         "10s",

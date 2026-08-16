@@ -38,7 +38,14 @@ class DeviceCollector:
         )
         # Previous samples for delta-based metrics.
         self._prev_cpu: dict[str, tuple[int, int]] = {}
-        self._prev_net: dict[str, dict[str, int]] = {}
+        # Label series currently exported for this device, so we can remove them
+        # when the device goes away (gappy series) or when a dimension vanishes.
+        self._active: set[tuple[object, tuple[str, ...]]] = set()
+        self._pending: set[tuple[object, tuple[str, ...]]] = set()
+        # Network interfaces exported this device (tracked separately because
+        # the raw byte counters live in a custom collector, not a Gauge/Counter).
+        self._active_net: set[str] = set()
+        self._pending_net: set[str] = set()
 
     def start(self) -> None:
         self._thread.start()
@@ -46,16 +53,45 @@ class DeviceCollector:
     def stop(self) -> None:
         self._stop.set()
 
+    def _set(self, metric, labels: tuple[str, ...], value: float) -> None:
+        """Set a gauge series and record it as active for this cycle."""
+        metric.labels(*labels).set(value)
+        self._pending.add((metric, labels))
+
+    def _drop_series(self, series: set[tuple[object, tuple[str, ...]]]) -> None:
+        for metric, labels in series:
+            try:
+                metric.remove(*labels)
+            except KeyError:
+                pass  # already gone
+
     def _run(self) -> None:
         serial = self.device.serial
         while not self._stop.is_set():
             start = time.monotonic()
+            self._pending = set()
+            self._pending_net = set()
             try:
                 self.device.connect()
                 self._collect()
+                # Remove series that were present last cycle but not this one
+                # (e.g. a network interface or thermal zone disappeared).
+                self._drop_series(self._active - self._pending)
+                self._active = self._pending
+                for iface in self._active_net - self._pending_net:
+                    metrics.network.remove(serial, iface)
+                self._active_net = self._pending_net
                 metrics.up.labels(serial).set(1)
                 metrics.collect_duration.labels(serial).set(time.monotonic() - start)
             except Exception as exc:  # noqa: BLE001 - keep the loop alive
+                # Device unreachable: drop all of its data series so graphs show
+                # a gap instead of a stale flat line. up/collect_errors remain.
+                # Network counters are dropped too; on reconnect they resume from
+                # the device's real raw total, staying monotonic across the gap.
+                self._drop_series(self._active)
+                self._active = set()
+                metrics.network.remove_device(serial)
+                self._active_net = set()
                 metrics.up.labels(serial).set(0)
                 metrics.collect_errors.labels(serial).inc()
                 logger.warning("collection failed for %s: %s", serial, exc)
@@ -66,14 +102,18 @@ class DeviceCollector:
 
         # Identity (cached after first fetch).
         labels = self.device.labels()
-        metrics.device_info.labels(
-            labels["device"],
-            labels["android_version"],
-            labels["model"],
-            labels["manufacturer"],
-            labels["name"],
-            labels["board"],
-        ).set(1)
+        self._set(
+            metrics.device_info,
+            (
+                labels["device"],
+                labels["android_version"],
+                labels["model"],
+                labels["manufacturer"],
+                labels["name"],
+                labels["board"],
+            ),
+            1,
+        )
 
         self._collect_cpu(serial)
         self._collect_cpu_freq(serial)
@@ -90,7 +130,7 @@ class DeviceCollector:
         for name, sample in stat.items():
             prev = self._prev_cpu.get(name)
             if prev is not None:
-                metrics.cpu_usage.labels(serial, name).set(parsers.cpu_percent(prev, sample))
+                self._set(metrics.cpu_usage, (serial, name), parsers.cpu_percent(prev, sample))
         self._prev_cpu = stat
 
     def _collect_cpu_freq(self, serial: str) -> None:
@@ -105,63 +145,56 @@ class DeviceCollector:
             if khz is None:
                 continue
             core = path.split("/")[5]  # .../cpu/cpuN/cpufreq/...
-            metrics.cpu_freq.labels(serial, core).set(khz * 1000)  # kHz -> Hz
+            self._set(metrics.cpu_freq, (serial, core), khz * 1000)  # kHz -> Hz
 
     def _collect_memory(self, serial: str) -> None:
         info = parsers.parse_meminfo(self.device.cat("/proc/meminfo"))
         for key, field in _MEMINFO_FIELDS.items():
             if key in info:
-                metrics.memory.labels(serial, field).set(info[key])
+                self._set(metrics.memory, (serial, field), info[key])
 
     def _collect_disk(self, serial: str) -> None:
         for mount in parsers.parse_df(self.device.shell("df -kP")):
             name = mount["mount"]
-            metrics.disk.labels(serial, name, "size").set(mount["size"])
-            metrics.disk.labels(serial, name, "used").set(mount["used"])
-            metrics.disk.labels(serial, name, "available").set(mount["available"])
+            self._set(metrics.disk, (serial, name, "size"), mount["size"])
+            self._set(metrics.disk, (serial, name, "used"), mount["used"])
+            self._set(metrics.disk, (serial, name, "available"), mount["available"])
 
     def _collect_thermal(self, serial: str) -> None:
         # /sys/class/thermal needs root on many boxes; dumpsys thermalservice
         # exposes named HAL temperatures unprivileged in a stable format.
         raw = self.device.shell("dumpsys thermalservice")
         for zone, celsius in parsers.parse_thermal_dumpsys(raw).items():
-            metrics.temperature.labels(serial, zone).set(celsius)
+            self._set(metrics.temperature, (serial, zone), celsius)
 
     def _collect_network(self, serial: str) -> None:
+        # Expose the device's own raw cumulative byte totals directly. No delta
+        # math: monotonic within the device's uptime, and Prometheus handles
+        # genuine resets (device reboots) at query time.
         current = parsers.parse_net_dev(self.device.cat("/proc/net/dev"))
         for iface, counters in current.items():
-            prev = self._prev_net.get(iface)
-            if prev is not None:
-                self._inc_counter(metrics.network_rx, serial, iface, prev, counters, "rx_bytes")
-                self._inc_counter(metrics.network_tx, serial, iface, prev, counters, "tx_bytes")
-        self._prev_net = current
-
-    @staticmethod
-    def _inc_counter(metric, serial, iface, prev, curr, key) -> None:
-        delta = curr[key] - prev[key]
-        if delta < 0:  # device rebooted / counter reset
-            delta = curr[key]
-        metric.labels(serial, iface).inc(delta)
+            metrics.network.set(serial, iface, counters["rx_bytes"], counters["tx_bytes"])
+            self._pending_net.add(iface)
 
     def _collect_system(self, serial: str) -> None:
-        metrics.uptime.labels(serial).set(parsers.parse_uptime(self.device.cat("/proc/uptime")))
+        self._set(metrics.uptime, (serial,), parsers.parse_uptime(self.device.cat("/proc/uptime")))
 
         load = parsers.parse_loadavg(self.device.cat("/proc/loadavg"))
         if load:
-            metrics.load.labels(serial, "1").set(load["load1"])
-            metrics.load.labels(serial, "5").set(load["load5"])
-            metrics.load.labels(serial, "15").set(load["load15"])
+            self._set(metrics.load, (serial, "1"), load["load1"])
+            self._set(metrics.load, (serial, "5"), load["load5"])
+            self._set(metrics.load, (serial, "15"), load["load15"])
             if "procs_running" in load:
-                metrics.processes.labels(serial, "running").set(load["procs_running"])
+                self._set(metrics.processes, (serial, "running"), load["procs_running"])
             if "procs_total" in load:
-                metrics.processes.labels(serial, "total").set(load["procs_total"])
+                self._set(metrics.processes, (serial, "total"), load["procs_total"])
 
     def _collect_gpu(self, serial: str) -> None:
         # GPU frequency/utilisation need root on most boxes; the total GPU
         # memory from `dumpsys gpu` is available unprivileged. Best-effort.
         total = parsers.parse_gpu_meminfo(self.device.shell("dumpsys gpu"))
         if total is not None:
-            metrics.gpu_memory.labels(serial).set(total)
+            self._set(metrics.gpu_memory, (serial,), total)
 
     def _collect_power(self, serial: str) -> None:
         # Only the AC/USB online state from the battery service is trustworthy
@@ -169,6 +202,6 @@ class DeviceCollector:
         # (present: false), so they are intentionally not exported.
         battery = parsers.parse_battery(self.device.shell("dumpsys battery"))
         if "ac_online" in battery:
-            metrics.power_online.labels(serial, "ac").set(battery["ac_online"])
+            self._set(metrics.power_online, (serial, "ac"), battery["ac_online"])
         if "usb_online" in battery:
-            metrics.power_online.labels(serial, "usb").set(battery["usb_online"])
+            self._set(metrics.power_online, (serial, "usb"), battery["usb_online"])
