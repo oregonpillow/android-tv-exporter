@@ -17,4 +17,5 @@ services:
       # ANDROIDTV_TIMEOUT: "10"
       # ANDROIDTV_LOG_LEVEL: "INFO"
     volumes:
+      # IMPORTANT: create the adb-keys folder first before running container to avoid permission issues
       - ./adb-keys:/home/exporter/.android
