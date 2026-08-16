@@ -3,7 +3,7 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "adp252r",
-    "generation": 16,
+    "generation": 18,
     "creationTimestamp": "2026-08-15T21:44:17Z",
     "labels": {},
     "annotations": {}
@@ -238,6 +238,16 @@
                           "index": 0
                         }
                       }
+                    },
+                    {
+                      "type": "special",
+                      "options": {
+                        "match": "null",
+                        "result": {
+                          "color": "red",
+                          "index": 2
+                        }
+                      }
                     }
                   ],
                   "thresholds": {
@@ -252,8 +262,7 @@
                   "color": {
                     "mode": "thresholds",
                     "fixedColor": "#ad46ff"
-                  },
-                  "noValue": "0"
+                  }
                 },
                 "overrides": []
               }
@@ -939,7 +948,7 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(androidtv_network_transmit_bytes_total{interface=\"eth0\"}[$__rate_interval]))",
+                        "expr": "sum(rate(androidtv_network_transmit_bytes_total{interface=\"eth0\", device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "__auto",
                         "range": true
@@ -1077,7 +1086,7 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\"}[$__rate_interval]))",
+                        "expr": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\", device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "__auto",
                         "range": true
@@ -1177,7 +1186,7 @@
                     "matcher": {
                       "id": "byName",
                       "scope": "series",
-                      "options": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\"}[1m0s]))"
+                      "options": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\", device=~\"192\\\\.168\\\\.0\\\\.27:5555\", instance=~\"android-tv-exporter:9100\", job=~\"android-tv-exporter\"}[1m0s]))"
                     },
                     "properties": [
                       {
