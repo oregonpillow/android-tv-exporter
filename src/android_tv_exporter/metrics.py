@@ -7,7 +7,10 @@ dimension of their own (cpu, mount, interface, zone), which keeps cardinality lo
 
 from __future__ import annotations
 
-from prometheus_client import Counter, Gauge
+import threading
+
+from prometheus_client import REGISTRY, Counter, Gauge
+from prometheus_client.core import CounterMetricFamily
 
 # Identity ------------------------------------------------------------------
 device_info = Gauge(
@@ -66,16 +69,54 @@ power_online = Gauge(
 )
 
 # Network -------------------------------------------------------------------
-network_rx = Counter(
-    "androidtv_network_receive_bytes_total",
-    "Bytes received per interface.",
-    ["device", "interface"],
-)
-network_tx = Counter(
-    "androidtv_network_transmit_bytes_total",
-    "Bytes transmitted per interface.",
-    ["device", "interface"],
-)
+# Exposed as the device's own raw cumulative byte counters (like node_exporter),
+# not a self-accumulated delta. A custom collector emits the last cached value
+# for each interface, so the exported counter stays monotonic within the
+# device's uptime and Prometheus handles genuine resets (device reboots) itself.
+
+
+class _NetworkCollector:
+    """Holds the latest raw rx/tx byte totals per (device, interface)."""
+
+    def __init__(self) -> None:
+        self._values: dict[tuple[str, str], tuple[int, int]] = {}
+        self._lock = threading.Lock()
+
+    def set(self, device: str, iface: str, rx: int, tx: int) -> None:
+        with self._lock:
+            self._values[(device, iface)] = (rx, tx)
+
+    def remove(self, device: str, iface: str) -> None:
+        with self._lock:
+            self._values.pop((device, iface), None)
+
+    def remove_device(self, device: str) -> None:
+        with self._lock:
+            self._values = {k: v for k, v in self._values.items() if k[0] != device}
+
+    def collect(self):
+        rx = CounterMetricFamily(
+            "androidtv_network_receive_bytes",
+            "Bytes received per interface (device's raw cumulative counter).",
+            labels=["device", "interface"],
+        )
+        tx = CounterMetricFamily(
+            "androidtv_network_transmit_bytes",
+            "Bytes transmitted per interface (device's raw cumulative counter).",
+            labels=["device", "interface"],
+        )
+        with self._lock:
+            items = list(self._values.items())
+        for (device, iface), (rx_bytes, tx_bytes) in items:
+            rx.add_metric([device, iface], rx_bytes)
+            tx.add_metric([device, iface], tx_bytes)
+        yield rx
+        yield tx
+
+
+network = _NetworkCollector()
+REGISTRY.register(network)
+
 
 # System --------------------------------------------------------------------
 uptime = Gauge("androidtv_uptime_seconds", "Device uptime in seconds.", ["device"])
