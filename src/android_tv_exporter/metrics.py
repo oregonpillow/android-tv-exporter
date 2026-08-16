@@ -69,10 +69,10 @@ power_online = Gauge(
 )
 
 # Network -------------------------------------------------------------------
-# Exposed as the device's own raw cumulative byte counters (like node_exporter),
-# not a self-accumulated delta. A custom collector emits the last cached value
-# for each interface, so the exported counter stays monotonic within the
-# device's uptime and Prometheus handles genuine resets (device reboots) itself.
+"""Exposed as the device's own raw cumulative byte counters (like node_exporter),
+not a self-accumulated delta. A custom collector emits the last cached value
+for each interface, so the exported counter stays monotonic within the
+device's uptime and Prometheus handles genuine resets (device reboots) itself."""
 
 
 class _NetworkCollector:

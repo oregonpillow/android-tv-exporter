@@ -9,6 +9,24 @@
 It polls stable `/proc` and `/sys` sources on one or more Android TV devices via
 the local ADB server and exposes them as Prometheus metrics.
 
+## Features
+
+- **Broad device coverage** — deliberately built around stable, universal
+  `/proc`, `/sys`, and `dumpsys` sources, so it works across Android versions
+  and manufacturers rather than targeting a single box. No root required.
+- **Rich system metrics** — CPU usage (aggregate and per-core), CPU frequency,
+  memory, disk usage, thermal zones, network throughput (raw cumulative rx/tx
+  byte counters, node_exporter-style), uptime, load average, process counts,
+  GPU memory, and power source state.
+- **Multi-device** — poll any number of TVs from a single exporter instance.
+- **Rootless Docker** — ships a container that runs as a non-root user, with the
+  bundled ADB server and configurable UID/GID for clean bind-mount permissions.
+- **Tested Grafana dashboard** — includes a ready-to-import dashboard (pictured
+  above) verified against a real device.
+- **Prometheus-native behavior** — series go gappy when a device is unreachable
+  instead of showing stale flat lines, and counters stay monotonic across
+  outages so `rate()`/`increase()` just work.
+
 ## Install
 
 ```sh
