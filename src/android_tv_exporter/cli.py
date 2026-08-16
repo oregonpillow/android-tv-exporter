@@ -101,8 +101,8 @@ def main(
         "container. See the README 'First-time device setup' section."
     )
 
-    # Block until we're asked to stop. SIGTERM (docker stop) and SIGINT (Ctrl-C)
-    # both release the event so shutdown is prompt instead of waiting for SIGKILL.
+    """Block until we're asked to stop. SIGTERM (docker stop) and SIGINT (Ctrl-C)
+    both release the event so shutdown is prompt instead of waiting for SIGKILL."""
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     signal.signal(signal.SIGINT, lambda *_: stop.set())

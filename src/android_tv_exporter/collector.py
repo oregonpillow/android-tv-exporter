@@ -17,8 +17,8 @@ from .device import Device
 
 logger = logging.getLogger(__name__)
 
-# Sysfs globs are expanded on-device with shell; we read them in bulk where we
-# can to minimise the number of (slow) adb round-trips.
+"""Sysfs globs are expanded on-device with shell; we read them in bulk where we
+can to minimise the number of (slow) adb round-trips."""
 _MEMINFO_FIELDS = {
     "MemTotal": "total",
     "MemAvailable": "available",
@@ -38,12 +38,12 @@ class DeviceCollector:
         )
         # Previous samples for delta-based metrics.
         self._prev_cpu: dict[str, tuple[int, int]] = {}
-        # Label series currently exported for this device, so we can remove them
-        # when the device goes away (gappy series) or when a dimension vanishes.
+        """Label series currently exported for this device, so we can remove them
+        when the device goes away (gappy series) or when a dimension vanishes."""
         self._active: set[tuple[object, tuple[str, ...]]] = set()
         self._pending: set[tuple[object, tuple[str, ...]]] = set()
-        # Network interfaces exported this device (tracked separately because
-        # the raw byte counters live in a custom collector, not a Gauge/Counter).
+        """Network interfaces exported this device (tracked separately because
+        the raw byte counters live in a custom collector, not a Gauge/Counter)."""
         self._active_net: set[str] = set()
         self._pending_net: set[str] = set()
 
@@ -74,8 +74,8 @@ class DeviceCollector:
             try:
                 self.device.connect()
                 self._collect()
-                # Remove series that were present last cycle but not this one
-                # (e.g. a network interface or thermal zone disappeared).
+                """Remove series that were present last cycle but not this one
+                (e.g. a network interface or thermal zone disappeared)."""
                 self._drop_series(self._active - self._pending)
                 self._active = self._pending
                 for iface in self._active_net - self._pending_net:
@@ -84,10 +84,10 @@ class DeviceCollector:
                 metrics.up.labels(serial).set(1)
                 metrics.collect_duration.labels(serial).set(time.monotonic() - start)
             except Exception as exc:  # noqa: BLE001 - keep the loop alive
-                # Device unreachable: drop all of its data series so graphs show
-                # a gap instead of a stale flat line. up/collect_errors remain.
-                # Network counters are dropped too; on reconnect they resume from
-                # the device's real raw total, staying monotonic across the gap.
+                """Device unreachable: drop all of its data series so graphs show
+                a gap instead of a stale flat line. up/collect_errors remain.
+                Network counters are dropped too; on reconnect they resume from
+                the device's real raw total, staying monotonic across the gap."""
                 self._drop_series(self._active)
                 self._active = set()
                 metrics.network.remove_device(serial)
@@ -161,16 +161,22 @@ class DeviceCollector:
             self._set(metrics.disk, (serial, name, "available"), mount["available"])
 
     def _collect_thermal(self, serial: str) -> None:
-        # /sys/class/thermal needs root on many boxes; dumpsys thermalservice
-        # exposes named HAL temperatures unprivileged in a stable format.
+        """Collect thermal-zone temperatures.
+
+        /sys/class/thermal needs root on many boxes; dumpsys thermalservice
+        exposes named HAL temperatures unprivileged in a stable format.
+        """
         raw = self.device.shell("dumpsys thermalservice")
         for zone, celsius in parsers.parse_thermal_dumpsys(raw).items():
             self._set(metrics.temperature, (serial, zone), celsius)
 
     def _collect_network(self, serial: str) -> None:
-        # Expose the device's own raw cumulative byte totals directly. No delta
-        # math: monotonic within the device's uptime, and Prometheus handles
-        # genuine resets (device reboots) at query time.
+        """Collect per-interface network byte totals.
+
+        Expose the device's own raw cumulative byte totals directly. No delta
+        math: monotonic within the device's uptime, and Prometheus handles
+        genuine resets (device reboots) at query time.
+        """
         current = parsers.parse_net_dev(self.device.cat("/proc/net/dev"))
         for iface, counters in current.items():
             metrics.network.set(serial, iface, counters["rx_bytes"], counters["tx_bytes"])
@@ -190,16 +196,22 @@ class DeviceCollector:
                 self._set(metrics.processes, (serial, "total"), load["procs_total"])
 
     def _collect_gpu(self, serial: str) -> None:
-        # GPU frequency/utilisation need root on most boxes; the total GPU
-        # memory from `dumpsys gpu` is available unprivileged. Best-effort.
+        """Collect total GPU memory in use (best-effort).
+
+        GPU frequency/utilisation need root on most boxes; the total GPU
+        memory from `dumpsys gpu` is available unprivileged.
+        """
         total = parsers.parse_gpu_meminfo(self.device.shell("dumpsys gpu"))
         if total is not None:
             self._set(metrics.gpu_memory, (serial,), total)
 
     def _collect_power(self, serial: str) -> None:
-        # Only the AC/USB online state from the battery service is trustworthy
-        # on a mains box. voltage/temperature/charge are hardcoded placeholders
-        # (present: false), so they are intentionally not exported.
+        """Collect AC/USB power-source online state.
+
+        Only the AC/USB online state from the battery service is trustworthy
+        on a mains box. voltage/temperature/charge are hardcoded placeholders
+        (present: false), so they are intentionally not exported.
+        """
         battery = parsers.parse_battery(self.device.shell("dumpsys battery"))
         if "ac_online" in battery:
             self._set(metrics.power_online, (serial, "ac"), battery["ac_online"])
