@@ -3,7 +3,7 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "adp252r",
-    "generation": 18,
+    "generation": 19,
     "creationTimestamp": "2026-08-15T21:44:17Z",
     "labels": {},
     "annotations": {}
@@ -1293,7 +1293,7 @@
         "kind": "Panel",
         "spec": {
           "id": 3,
-          "title": "CPU Clock Speeds",
+          "title": "Average CPU Clock Speed",
           "description": "",
           "links": [],
           "data": {
@@ -1325,7 +1325,21 @@
                   }
                 }
               ],
-              "transformations": [],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "calculateField",
+                  "spec": {
+                    "options": {
+                      "mode": "reduceRow",
+                      "reduce": {
+                        "reducer": "mean"
+                      },
+                      "replaceFields": true
+                    }
+                  }
+                }
+              ],
               "queryOptions": {}
             }
           },
@@ -1345,7 +1359,7 @@
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
-                  "showLegend": true
+                  "showLegend": false
                 },
                 "tooltip": {
                   "hideZeros": false,
