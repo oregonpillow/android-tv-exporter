@@ -3,7 +3,7 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "adp252r",
-    "generation": 26,
+    "generation": 28,
     "creationTimestamp": "2026-08-15T21:44:17Z",
     "labels": {},
     "annotations": {}
@@ -988,7 +988,7 @@
         "spec": {
           "id": 16,
           "title": "Network Tx ↑",
-          "description": "Filtered only for eth0 interface (main interface on Google Streamer 4K)",
+          "description": "Only interfaces with non-zero traffic are shown",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1003,9 +1003,9 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(androidtv_network_transmit_bytes_total{interface=\"eth0\", device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
+                        "expr": "sum by (interface) (\n  rate(androidtv_network_transmit_bytes_total{\n    device=~\"$device\",\n    instance=~\"$instance\",\n    job=~\"$job\"\n  }[$__rate_interval])\n) > 0",
                         "instant": false,
-                        "legendFormat": "Tx",
+                        "legendFormat": "__auto",
                         "range": true
                       },
                       "labels": {
@@ -1038,7 +1038,7 @@
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
-                  "showLegend": false
+                  "showLegend": true
                 },
                 "tooltip": {
                   "hideZeros": false,
@@ -1063,7 +1063,8 @@
                     ]
                   },
                   "color": {
-                    "mode": "palette-classic"
+                    "mode": "fixed",
+                    "fixedColor": "green"
                   },
                   "custom": {
                     "axisBorderShow": false,
@@ -1112,7 +1113,7 @@
         "spec": {
           "id": 17,
           "title": "Network Rx ↓",
-          "description": "Filtered only for eth0 interface (main interface on Google Streamer 4K)",
+          "description": "Only interfaces with non-zero traffic are shown",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1127,9 +1128,9 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\", device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
+                        "expr": "(\n  -1 *\n  sum by (interface) (\n    rate(androidtv_network_receive_bytes_total{\n      device=~\"$device\",\n      instance=~\"$instance\",\n      job=~\"$job\"\n    }[$__rate_interval])\n  )\n) != 0",
                         "instant": false,
-                        "legendFormat": "Rx",
+                        "legendFormat": "__auto",
                         "range": true
                       },
                       "labels": {
@@ -1162,7 +1163,7 @@
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
-                  "showLegend": false
+                  "showLegend": true
                 },
                 "tooltip": {
                   "hideZeros": false,
@@ -1222,21 +1223,7 @@
                   },
                   "fieldMinMax": false
                 },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "Rx"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.transform",
-                        "value": "negative-Y"
-                      }
-                    ]
-                  }
-                ]
+                "overrides": []
               }
             }
           }
@@ -1246,8 +1233,8 @@
         "kind": "Panel",
         "spec": {
           "id": 18,
-          "title": "Network Tx ↑ / Rx ↓ Stacked (Symlog⏨x)",
-          "description": "Filtered only for eth0 interface (main interface on Google Streamer 4K)",
+          "title": "Total Network Tx ↑ / Rx ↓",
+          "description": "All interface traffic combined",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1262,7 +1249,7 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(androidtv_network_transmit_bytes_total{interface=\"eth0\", device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
+                        "expr": "sum(rate(androidtv_network_transmit_bytes_total{device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "Tx",
                         "range": true
@@ -1285,7 +1272,7 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(androidtv_network_receive_bytes_total{interface=\"eth0\", device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
+                        "expr": "sum(rate(androidtv_network_receive_bytes_total{device=~\"$device\", instance=~\"$instance\", job=~\"$job\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "Rx",
                         "range": true
@@ -1421,7 +1408,7 @@
         "spec": {
           "id": 19,
           "title": "Scrape Duration",
-          "description": "",
+          "description": "Time taken to scrape ADB data from Android device. Below 1 second is a reasonable target.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1664,29 +1651,6 @@
                     "refId": "A",
                     "hidden": false
                   }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "androidtv_disk_bytes{field=\"size\",device=~\"$device\", instance=~\"$instance\", job=~\"$job\",mount=\"/data\"}",
-                        "instant": false,
-                        "legendFormat": "Total Size",
-                        "range": true
-                      },
-                      "labels": {
-                        "grafana.app/export-label": "prometheus-1",
-                        "grafana.app/export-datasource-name": "prometheus"
-                      }
-                    },
-                    "refId": "B",
-                    "hidden": false
-                  }
                 }
               ],
               "transformations": [],
@@ -1709,7 +1673,7 @@
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "right",
-                  "showLegend": true
+                  "showLegend": false
                 },
                 "tooltip": {
                   "hideZeros": false,
@@ -1720,7 +1684,6 @@
               "fieldConfig": {
                 "defaults": {
                   "unit": "decbytes",
-                  "min": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -1745,7 +1708,7 @@
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
-                    "drawStyle": "line",
+                    "drawStyle": "bars",
                     "fillOpacity": 0,
                     "gradientMode": "none",
                     "hideFrom": {
@@ -1754,157 +1717,8 @@
                       "viz": false
                     },
                     "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "Total Size"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [
-                            10,
-                            10
-                          ],
-                          "fill": "dash"
-                        }
-                      },
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "red",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "panel-21": {
-        "kind": "Panel",
-        "spec": {
-          "id": 21,
-          "title": "Active Minor Interface Activity",
-          "description": "Only minor interfaces (not eth0) with network traffic detected are shown. Interfaces with no traffic are not shown.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "sum by (interface) (\n  rate(androidtv_network_receive_bytes_total{\n    device=~\"$device\",\n    instance=~\"$instance\",\n    job=~\"$job\",\n    interface!=\"eth0\"\n  }[$__rate_interval])\n) > 0",
-                        "legendFormat": "__auto",
-                        "range": true
-                      },
-                      "labels": {
-                        "grafana.app/export-label": "prometheus-1",
-                        "grafana.app/export-datasource-name": "prometheus"
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.1.3",
-            "spec": {
-              "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "overflow": "ellipsis",
-                  "placement": "right",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "Bps",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
+                    "lineInterpolation": "stepBefore",
+                    "lineWidth": 2,
                     "pointSize": 5,
                     "scaleDistribution": {
                       "type": "linear"
@@ -2076,7 +1890,7 @@
         "spec": {
           "id": 4,
           "title": "UP State",
-          "description": "",
+          "description": "The Power On state of the device. When this is up/on, it means the device has power and ADB server is listening and responding to requests.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3043,19 +2857,6 @@
                 "name": "panel-20"
               }
             }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 12,
-              "y": 53,
-              "width": 12,
-              "height": 8,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-21"
-              }
-            }
           }
         ]
       }
@@ -3066,7 +2867,7 @@
     "tags": [],
     "timeSettings": {
       "timezone": "browser",
-      "from": "now-12h",
+      "from": "now-6h",
       "to": "now",
       "autoRefresh": "30s",
       "autoRefreshIntervals": [
